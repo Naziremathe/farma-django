@@ -1,0 +1,452 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Crop Information - E-Fama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#16a34a',
+                        'primary-dark': '#15803d',
+                    }
+                }
+            }
+        }
+
+        // Crop options data
+        const cropOptions = {
+            fruits: [
+                {value: 'apples', label: 'Apples'},
+                {value: 'bananas', label: 'Bananas'},
+                {value: 'oranges', label: 'Oranges'},
+                {value: 'grapes', label: 'Grapes'},
+                {value: 'berries', label: 'Berries'},
+                {value: 'mangoes', label: 'Mangoes'},
+                {value: 'pineapples', label: 'Pineapples'},
+                {value: 'watermelons', label: 'Watermelons'},
+                {value: 'other_fruit', label: 'Other Fruit'}
+            ],
+            vegetables: [
+                {value: 'tomatoes', label: 'Tomatoes'},
+                {value: 'potatoes', label: 'Potatoes'},
+                {value: 'carrots', label: 'Carrots'},
+                {value: 'onions', label: 'Onions'},
+                {value: 'cabbage', label: 'Cabbage'},
+                {value: 'spinach', label: 'Spinach'},
+                {value: 'broccoli', label: 'Broccoli'},
+                {value: 'other_vegetable', label: 'Other Vegetable'}
+            ],
+            livestock: [
+                {value: 'cattle', label: 'Cattle'},
+                {value: 'poultry', label: 'Poultry'},
+                {value: 'goats', label: 'Goats'},
+                {value: 'sheep', label: 'Sheep'},
+                {value: 'pigs', label: 'Pigs'},
+                {value: 'fish', label: 'Fish'},
+                {value: 'other_livestock', label: 'Other Livestock'}
+            ]
+        };
+
+        // Price prediction state
+        let pricePrediction = null;
+        let isLoadingPrediction = false;
+
+        function updateCropOptions() {
+            const categorySelect = document.getElementById('category');
+            const cropNameSelect = document.getElementById('crop_name');
+            const selectedCategory = categorySelect.value;
+
+            // Clear existing options and reset pricing
+            cropNameSelect.innerHTML = '<option value="">Select crop name</option>';
+            resetPricing();
+
+            if (selectedCategory && cropOptions[selectedCategory]) {
+                // Add new options based on selected category
+                cropOptions[selectedCategory].forEach(crop => {
+                    const option = document.createElement('option');
+                    option.value = crop.value;
+                    option.textContent = crop.label;
+                    cropNameSelect.appendChild(option);
+                });
+                
+                cropNameSelect.disabled = false;
+            } else {
+                cropNameSelect.disabled = true;
+            }
+        }
+
+        function resetPricing() {
+            const priceInput = document.getElementById('price_per_kg');
+            const priceRecommendations = document.getElementById('price_recommendations');
+            const loadingIndicator = document.getElementById('price_loading');
+            
+            priceInput.disabled = true;
+            priceInput.value = '';
+            priceRecommendations.classList.add('hidden');
+            loadingIndicator.classList.add('hidden');
+            pricePrediction = null;
+        }
+
+        async function fetchPricePrediction(cropName, category) {
+            if (isLoadingPrediction) return;
+            
+            isLoadingPrediction = true;
+            const loadingIndicator = document.getElementById('price_loading');
+            const priceRecommendations = document.getElementById('price_recommendations');
+            
+            // Show loading
+            loadingIndicator.classList.remove('hidden');
+            priceRecommendations.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/crop-price-prediction/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: JSON.stringify({
+                        crop_name: cropName,
+                        category: category
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayPricePrediction(data);
+                } else {
+                    throw new Error('Failed to fetch price prediction');
+                }
+            } catch (error) {
+                console.error('Error fetching price prediction:', error);
+                showPredictionError();
+            } finally {
+                isLoadingPrediction = false;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        function displayPricePrediction(data) {
+            pricePrediction = data;
+            const priceRecommendations = document.getElementById('price_recommendations');
+            const priceInput = document.getElementById('price_per_kg');
+            
+            // Update recommendation display
+            document.getElementById('recommended_min').textContent = `R${data.min_price}`;
+            document.getElementById('recommended_max').textContent = `R${data.max_price}`;
+            document.getElementById('market_price').textContent = `R${data.avg_price}`;
+            document.getElementById('market_trend').textContent = data.trend;
+            document.getElementById('trend_indicator').className = `fas ${data.trend_icon} ${data.trend_color}`;
+            
+            // Set input constraints and enable
+            priceInput.min = (data.min_price * 0.8).toFixed(2); // Allow 20% below minimum
+            priceInput.max = (data.max_price * 1.2).toFixed(2); // Allow 20% above maximum
+            priceInput.placeholder = `Suggested: R${data.avg_price} per kg`;
+            priceInput.disabled = false;
+            
+            // Show recommendations
+            priceRecommendations.classList.remove('hidden');
+            
+            // Add price validation
+            addPriceValidation();
+        }
+
+        function addPriceValidation() {
+            const priceInput = document.getElementById('price_per_kg');
+            const priceWarning = document.getElementById('price_warning');
+            
+            priceInput.addEventListener('input', function() {
+                const enteredPrice = parseFloat(this.value);
+                
+                if (isNaN(enteredPrice) || !pricePrediction) {
+                    priceWarning.classList.add('hidden');
+                    return;
+                }
+                
+                let warningMessage = '';
+                let warningType = '';
+                
+                if (enteredPrice < pricePrediction.min_price * 0.8) {
+                    warningMessage = `Price seems very low. Market minimum is around R${pricePrediction.min_price}`;
+                    warningType = 'text-red-600 bg-red-50 border-red-200';
+                } else if (enteredPrice < pricePrediction.min_price) {
+                    warningMessage = `Price is below market minimum of R${pricePrediction.min_price}`;
+                    warningType = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                } else if (enteredPrice > pricePrediction.max_price * 1.2) {
+                    warningMessage = `Price seems very high. Market maximum is around R${pricePrediction.max_price}`;
+                    warningType = 'text-red-600 bg-red-50 border-red-200';
+                } else if (enteredPrice > pricePrediction.max_price) {
+                    warningMessage = `Price is above market maximum of R${pricePrediction.max_price}`;
+                    warningType = 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                } else {
+                    warningMessage = `Good price! Within market range of R${pricePrediction.min_price} - R${pricePrediction.max_price}`;
+                    warningType = 'text-green-600 bg-green-50 border-green-200';
+                }
+                
+                if (warningMessage) {
+                    priceWarning.textContent = warningMessage;
+                    priceWarning.className = `mt-2 p-2 text-sm rounded border ${warningType}`;
+                    priceWarning.classList.remove('hidden');
+                } else {
+                    priceWarning.classList.add('hidden');
+                }
+            });
+        }
+
+        function showPredictionError() {
+            const priceRecommendations = document.getElementById('price_recommendations');
+            const priceInput = document.getElementById('price_per_kg');
+            
+            // Still enable price input but without recommendations
+            priceInput.disabled = false;
+            priceInput.placeholder = 'Enter price per kilogram';
+            
+            // Show error message
+            document.getElementById('prediction_error').classList.remove('hidden');
+        }
+
+        function setPredictedPrice(price) {
+            document.getElementById('price_per_kg').value = price;
+            // Trigger validation
+            document.getElementById('price_per_kg').dispatchEvent(new Event('input'));
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCropOptions();
+            
+            // Add event listeners
+            document.getElementById('category').addEventListener('change', updateCropOptions);
+            
+            document.getElementById('crop_name').addEventListener('change', function() {
+                const cropName = this.value;
+                const category = document.getElementById('category').value;
+                
+                if (cropName && category) {
+                    fetchPricePrediction(cropName, category);
+                } else {
+                    resetPricing();
+                }
+            });
+        });
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <img src="{% static 'images/efama.png' %}" alt="E-Fama Logo" class="h-40 w-auto">
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="window.location.href='{% url 'forecast-dashboard' %}'" class="text-gray-600 hover:text-green-600 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>Back
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-md p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Upload Crop Information</h2>
+                <p class="text-gray-600">Add your crop details to connect with potential buyers</p>
+            </div>
+
+            {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                <div class="p-3 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-6" id="crop-form">
+                {% csrf_token %}
+
+                <!-- Show form errors -->
+                {% if form.errors %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <strong>There were errors with your submission:</strong>
+                    <ul class="mt-2 list-disc list-inside">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <!-- Category and Crop Name -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                            Category *
+                        </label>
+                        <select id="category" name="category" required 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                            <option value="">Select category</option>
+                            <option value="fruits">Fruits</option>
+                            <option value="vegetables">Vegetables</option>
+                            <option value="livestock">Livestock</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="crop_name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Crop Name *
+                        </label>
+                        <select id="crop_name" name="crop_name" required disabled
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                            <option value="">Select category first</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="crop_description" class="block text-sm font-medium text-gray-700 mb-2">
+                            Crop Description
+                        </label>
+                        <textarea id="crop_description" name="crop_description" rows="3" 
+                            placeholder="Provide additional details about the crop (optional)" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"></textarea>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="id_image" class="block text-sm font-medium text-gray-700 mb-2">
+                        Crop Image
+                    </label>
+                    <input type="file" id="id_image" name="image" 
+                        accept="image/*"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                    <p class="text-sm text-gray-500 mt-1">Upload a photo of your crop (optional)</p>
+                </div>
+
+                <!-- Quantity (in kg) -->
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-2">
+                        Quantity (kg) *
+                    </label>
+                    <input type="number" id="quantity" name="quantity" required min="0.01" step="0.01" 
+                        placeholder="Enter quantity in kilograms" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                </div>
+
+                <!-- Sell By Date -->
+                <div>
+                    <label for="sell_by_date" class="block text-sm font-medium text-gray-700 mb-2">
+                        Sell By Date *
+                    </label>
+                    <input type="date" id="sell_by_date" name="sell_by_date" required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                    <p class="text-sm text-gray-500 mt-1">When should this crop be sold by?</p>
+                </div>
+
+                <!-- Price Loading Indicator -->
+                <div id="price_loading" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <span class="text-blue-800 font-medium">Getting current market prices...</span>
+                    </div>
+                </div>
+
+                <!-- Price Prediction Error -->
+                <div id="prediction_error" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                        <span class="text-yellow-800">Unable to fetch current market prices. You can still set your own price.</span>
+                    </div>
+                </div>
+
+                <!-- Price Recommendations -->
+                <div id="price_recommendations" class="hidden bg-green-50 border border-green-200 rounded-lg p-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                        <h3 class="text-lg font-semibold text-green-800">Market Price Insights</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-white rounded-lg p-3 text-center border border-green-200">
+                            <div class="text-sm text-gray-600 mb-1">Market Minimum</div>
+                            <div id="recommended_min" class="text-lg font-bold text-gray-900">R0</div>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 text-center border border-green-200">
+                            <div class="text-sm text-gray-600 mb-1">Average Price</div>
+                            <div id="market_price" class="text-lg font-bold text-green-600">R0</div>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 text-center border border-green-200">
+                            <div class="text-sm text-gray-600 mb-1">Market Maximum</div>
+                            <div id="recommended_max" class="text-lg font-bold text-gray-900">R0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-700">Market Trend:</span>
+                            <i id="trend_indicator" class="fas fa-arrow-up text-green-600"></i>
+                            <span id="market_trend" class="font-medium">Stable</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button type="button" onclick="setPredictedPrice(document.getElementById('recommended_min').textContent.replace('R', ''))" 
+                            class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm transition-colors">
+                            Use Min Price
+                        </button>
+                        <button type="button" onclick="setPredictedPrice(document.getElementById('market_price').textContent.replace('R', ''))" 
+                            class="flex-1 bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg text-sm transition-colors">
+                            Use Average Price
+                        </button>
+                        <button type="button" onclick="setPredictedPrice(document.getElementById('recommended_max').textContent.replace('R', ''))" 
+                            class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm transition-colors">
+                            Use Max Price
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Price per kg -->
+                <div>
+                    <label for="price_per_kg" class="block text-sm font-medium text-gray-700 mb-2">
+                        Price per kg (ZAR) *
+                    </label>
+                    <input type="number" id="price_per_kg" name="price_per_kg" required min="0" step="0.01" 
+                        disabled placeholder="Select a crop first to see price suggestions" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors disabled:bg-gray-50 disabled:text-gray-500">
+                    <div id="price_warning" class="hidden"></div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-6">
+                    <button type="submit" 
+                        class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        Upload Crop Information
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>
+
+<script>
+    // Re-enable disabled fields on submit (otherwise Django never sees them)
+    document.getElementById("crop-form").addEventListener("submit", function() {
+        document.getElementById("crop_name").disabled = false;
+        document.getElementById("price_per_kg").disabled = false;
+    });
+</script>

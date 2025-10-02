@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initialize Forecasting Model - E-Fama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22c55e',
+                        'primary-dark': '#16a34a',
+                        'primary-light': '#4ade80'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen py-8 px-4 flex items-center justify-center font-sans">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-8">
+        <div class="text-center mb-8">
+                <div class="flex items-center space-x-2">
+                    <img src="{% static 'images/efama.png' %}" alt="E-Fama Logo" class="h-40 w-auto">
+                </div>
+            <h1 class="text-3xl font-bold text-black mb-2">🌾 Initialize Forecasting Model</h1>
+            <p class="text-gray-600 text-sm">Create a new price and demand forecasting model for your crop</p>
+        </div>
+
+        <form id="forecastForm" class="space-y-6">
+
+            <div>
+                <label for="cropName" class="block text-sm font-semibold text-black mb-2">Crop Name *</label>
+                <input 
+                    type="text" 
+                    id="cropName" 
+                    name="crop_name" 
+                    placeholder="e.g., Tomatoes, Maize, Potatoes"
+                    required
+                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm transition-all duration-300 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                >
+                <p class="text-xs text-gray-500 mt-1">Enter the name of the crop you want to forecast</p>
+            </div>
+
+
+            <div>
+                <label for="province" class="block text-sm font-semibold text-black mb-2">Province *</label>
+                <select 
+                    id="province" 
+                    name="province" 
+                    required
+                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm transition-all duration-300 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white"
+                >
+                    <option value="">Select a province...</option>
+                    <option value="KZN">KwaZulu-Natal</option>
+                    <option value="GP">Gauteng</option>
+                    <option value="WC">Western Cape</option>
+                    <option value="EC">Eastern Cape</option>
+                    <option value="NC">Northern Cape</option>
+                    <option value="FS">Free State</option>
+                    <option value="MP">Mpumalanga</option>
+                    <option value="LP">Limpopo</option>
+                    <option value="NW">North West</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Select the province for regional forecasting</p>
+            </div>
+
+
+            <div>
+                <label class="block text-sm font-semibold text-black mb-2">Historical Dataset (CSV) *</label>
+                <div class="relative">
+                    <input 
+                        type="file" 
+                        id="dataset" 
+                        name="dataset" 
+                        accept=".csv"
+                        required
+                        class="hidden"
+                    >
+                    <label 
+                        for="dataset" 
+                        id="fileLabel"
+                        class="flex items-center justify-center p-10 border-2 border-dashed border-primary rounded-lg cursor-pointer transition-all duration-300 hover:bg-primary/5 hover:border-primary-dark bg-primary/5"
+                    >
+                        <span class="text-3xl mr-3">📄</span>
+                        <div class="text-left">
+                            <div class="font-semibold text-black">Click to upload CSV file</div>
+                            <div class="text-sm text-gray-600">Historical price and demand data required</div>
+                        </div>
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Upload CSV with columns: date, price, demand</p>
+            </div>
+
+
+            <button 
+                type="submit" 
+                id="submitBtn"
+                class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none"
+            >
+                Initialize Forecast Model
+            </button>
+        </form>
+
+        <div id="statusMessage" class="hidden mt-6 p-4 rounded-lg animate-pulse"></div>
+    </div>
+
+<script>
+    // Only run the script if user is admin
+    {% if user.is_staff %}
+    const form = document.getElementById('forecastForm');
+    const fileInput = document.getElementById('dataset');
+    const fileLabel = document.getElementById('fileLabel');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // Get CSRF token from Django
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            fileLabel.classList.add('has-file');
+            fileLabel.innerHTML = `
+                <span class="file-icon">✅</span>
+                <div class="file-text">
+                    <strong>${file.name}</strong>
+                    <span>${(file.size / 1024).toFixed(2)} KB</span>
+                </div>
+            `;
+        }
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // Create FormData from form
+        const formData = new FormData();
+        formData.append('crop_name', document.getElementById('cropName').value);
+        formData.append('province', document.getElementById('province').value);
+        formData.append('dataset', fileInput.files[0]);
+
+        // Disable submit button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading-spinner"></span>Initializing Model...';
+
+        try {
+            // Make request to Django backend
+            const response = await fetch('/api/forecasting/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    // Session authentication - no Authorization header needed
+                },
+                body: formData,
+                credentials: 'same-origin'  // Include cookies for session auth
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('success', `
+                    ✅ <strong>Model Initialization Started!</strong><br>
+                    <div style="margin-top: 8px;">
+                        Model ID: <strong>${data.model_id}</strong><br>
+                        ${data.message}<br>
+                        <small style="color: #666;">Redirecting to dashboard in 3 seconds...</small>
+                    </div>
+                `);
+                
+                // Redirect to dashboard after 3 seconds
+                setTimeout(() => {
+                    window.location.href = "{% url 'crop_list' %}";
+                }, 3000);
+            } else {
+                // Handle validation errors
+                let errorMsg = 'Failed to create model';
+                if (data.crop_name) {
+                    errorMsg = `Crop Name: ${data.crop_name.join(', ')}`;
+                } else if (data.province) {
+                    errorMsg = `Province: ${data.province.join(', ')}`;
+                } else if (data.dataset) {
+                    errorMsg = `Dataset: ${data.dataset.join(', ')}`;
+                } else if (data.error) {
+                    errorMsg = data.error;
+                } else if (data.detail) {
+                    errorMsg = data.detail;
+                }
+                
+                showMessage('error', `
+                    ❌ <strong>Error:</strong><br>
+                    <div style="margin-top: 8px;">${errorMsg}</div>
+                `);
+            }
+        } catch (error) {
+            showMessage('error', `
+                ❌ <strong>Connection Error:</strong><br>
+                <div style="margin-top: 8px;">
+                    ${error.message}<br>
+                    <small style="color: #666;">Please check your connection and try again.</small>
+                </div>
+            `);
+            console.error('Full error:', error);
+        } finally {
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Initialize Forecast Model';
+        }
+    });
+
+    function showMessage(type, message) {
+        statusMessage.className = `status-message ${type}`;
+        statusMessage.innerHTML = message;
+        statusMessage.style.display = 'block';
+
+        // Auto-hide error messages after 10 seconds
+        if (type === 'error') {
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 10000);
+        }
+    }
+    {% endif %}
+</script>
+</body>
+</html>

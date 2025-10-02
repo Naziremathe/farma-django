@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Crop Listings - E-Fama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#16a34a',
+                        'primary-dark': '#15803d',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <img src="{% static 'images/efama.png' %}" alt="E-Fama Logo" class="h-40 w-auto">
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="{% url 'crop_upload' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">Upload New Crop</a>
+                    <a href="/dashboard" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">Dashboard</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">My Crop Listings</h2>
+            <p class="text-gray-600">Manage your crop listings and track their status</p>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-3 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if crops %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for crop in crops %}
+            <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <!-- Crop Image -->
+                <div class="h-48 bg-gray-200 overflow-hidden">
+                    {% if crop.image %}
+                    <img src="{{ crop.image.url }}" alt="{{ crop.crop_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                        <span class="text-gray-400">No Image</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Crop Details -->
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-semibold text-gray-900 capitalize">{{ crop.get_crop_name_display }}</h3>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {{ crop.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <p class="text-gray-600 mb-2 capitalize">{{ crop.get_category_display }}</p>
+                    
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Quantity:</span>
+                            <span class="font-semibold">{{ crop.quantity }} kg</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Price per kg:</span>
+                            <span class="font-semibold">R{{ crop.price_per_kg }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Total Value:</span>
+                            <span class="font-semibold">R{{ crop.total_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Sell By:</span>
+                            <span class="font-semibold">{{ crop.sell_by_date|date:"j M Y" }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                        <span class="text-sm text-gray-500">Posted {{ crop.created_at|timesince }} ago</span>
+                        <div class="flex space-x-2">
+                            {% if crop.status == 'draft' %}
+                            <button class="text-primary hover:text-primary-dark text-sm font-medium">Publish</button>
+                            {% endif %}
+                            <button class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="mt-8 flex justify-center">
+            <nav class="flex space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border border-gray-300 rounded-md text-gray-500 hover:bg-gray-50">Previous</a>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span class="px-3 py-2 border border-primary bg-primary text-white rounded-md">{{ num }}</span>
+                {% else %}
+                <a href="?page={{ num }}" class="px-3 py-2 border border-gray-300 rounded-md text-gray-500 hover:bg-gray-50">{{ num }}</a>
+                {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border border-gray-300 rounded-md text-gray-500 hover:bg-gray-50">Next</a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="bg-white rounded-lg shadow-md p-12 text-center">
+            <div class="max-w-md mx-auto">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.93-6.04-2.46M3 12h.01M21 12h.01"></path>
+                </svg>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">No crop listings</h3>
+                <p class="mt-2 text-gray-500">Get started by uploading your first crop listing.</p>
+                <div class="mt-6">
+                    <a href="{% url 'crop_upload' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        Upload Crop
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+</body>
+</html>
