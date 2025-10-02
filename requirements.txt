@@ -7,8 +7,8 @@ django-phonenumber-field==8.1.0
 
 # Database & Cache
 psycopg2-binary==2.9.10
-#redis==6.4.0
-
+redis==6.4.0
+celery==5.5.3
 # Essential utilities
 python-decouple==3.8
 whitenoise==6.11.0
