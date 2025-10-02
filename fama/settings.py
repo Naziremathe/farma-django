@@ -233,8 +233,7 @@ FUEL_API_KEY = config('FUEL_API_KEY', default=None)
 
 
 # Model Storage
-MODEL_STORAGE_PATH = os.path.join(BASE_DIR, 'ml_models')
-os.makedirs(MODEL_STORAGE_PATH, exist_ok=True)
+
 
 # REST Framework
 REST_FRAMEWORK = {
