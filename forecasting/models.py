@@ -17,10 +17,7 @@ class ForecastingModel(models.Model):
     
     crop_name = models.CharField(max_length=100)
     province = models.CharField(max_length=3, choices=PROVINCE_CHOICES)
-    dataset = models.FileField(
-        upload_to="datasets/",
-        validators=[FileExtensionValidator(allowed_extensions=['csv'])]
-    )
+    #dataset = models.FileField( upload_to="datasets/", validators=[FileExtensionValidator(allowed_extensions=['csv'])] )
     
     # Model status - FIXED: Default to False
     is_initialized = models.BooleanField(default=False)

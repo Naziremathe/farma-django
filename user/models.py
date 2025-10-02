@@ -137,7 +137,7 @@ class CropListing(models.Model):
     crop_description = models.TextField(blank=True, null=True)
     
     # Image Field
-    image = models.ImageField(upload_to='crop_images/', null=True, blank=True)
+    #image = models.ImageField(upload_to='crop_images/', null=True, blank=True)
     
     # Quantity Information
     quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
