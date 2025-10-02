@@ -7,7 +7,7 @@ django-phonenumber-field==8.1.0
 
 # Database & Cache
 psycopg2-binary==2.9.10
-redis==6.4.0
+#redis==6.4.0
 
 # Essential utilities
 python-decouple==3.8
@@ -16,8 +16,8 @@ Pillow==11.3.0
 requests==2.32.5
 
 # Light data processing (if absolutely needed)
-pandas==2.2.2
-numpy==1.26.4
-scikit-learn==1.7.2
+#pandas==2.2.2
+#numpy==1.26.4
+#scikit-learn==1.7.2
 
 # REMOVED: torch, transformers, prophet, gluonts, lag-llama
