@@ -2,10 +2,8 @@
   "builds": [
     {
       "src": "fama/wsgi.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/python"
+      
     }
   ],
   "routes": [
@@ -17,11 +15,5 @@
       "src": "/(.*)",
       "dest": "fama/wsgi.py"
     }
-  ],
-  "functions": {
-    "fama/wsgi.py": {
-      "maxDuration": 30,
-      "memory": 3008
-    }
-  }
+  ]
 }
