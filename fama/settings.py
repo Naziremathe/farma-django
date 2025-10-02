@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
     
     # Third-party apps
     'rest_framework',
@@ -181,7 +182,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files
 #MEDIA_URL = '/media/'
 #MEDIA_ROOT = BASE_DIR / 'media'
-
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Session settings for better performance
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'default'
