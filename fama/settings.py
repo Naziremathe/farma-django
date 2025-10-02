@@ -40,13 +40,12 @@ INSTALLED_APPS = [
     'user',
     'forecasting',
 
-    'tailwind',
-    'theme',
+    #'tailwind',
+    #'theme',
 ]
 
 
-TAILWIND_APP_NAME = 'theme'
-NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
