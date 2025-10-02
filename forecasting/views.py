@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.db.models import Avg, Sum, Max, Min
 from django.utils import timezone
 from django.contrib.auth.decorators import user_passes_test
-import pandas as pd
+#import pandas as pd
 from .ai_insights import AIIntelligenceEngine
 from django.utils import timezone
 from .forecaster import LagLLAMAForecaster

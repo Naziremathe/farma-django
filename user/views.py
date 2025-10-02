@@ -17,13 +17,13 @@ from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.shortcuts import get_object_or_404
 from .forms import CropListingForm
 from .models import CropListing
-import pandas as pd
+#import pandas as pd
 from rest_framework.decorators import api_view
 from .forecast import forecast_prophet
 from .openai_utils import gpt_insights
 import openai
 from prophet import Prophet
-import numpy as np
+#import numpy as np
 from datetime import datetime, timedelta
 import json
 from django.http import JsonResponse
