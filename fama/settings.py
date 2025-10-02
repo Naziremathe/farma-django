@@ -185,8 +185,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 if os.environ.get('VERCEL'):
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MODEL_STORAGE_PATH = '/tmp'  # Just point to existing /tmp
+MEDIA_ROOT = '/tmp/media'
 
 # Session settings for better performance
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
