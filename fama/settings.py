@@ -159,8 +159,12 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True  # Configure properly for production
+CORS_ALLOWED_ORIGINS = [
+    "farma-django.vercel.app",
+]
+
 CORS_ALLOW_CREDENTIALS = True
+
 
 # Custom User Model
 AUTHENTICATION_BACKENDS = [
