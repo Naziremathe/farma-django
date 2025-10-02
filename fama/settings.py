@@ -86,12 +86,7 @@ WSGI_APPLICATION = 'fama.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+
 
 DATABASES = {
     'default': {
@@ -160,7 +155,7 @@ SIMPLE_JWT = {
 
 # CORS Settings
 CORS_ALLOWED_ORIGINS = [
-    "farma-django.vercel.app",
+    "https://farma-django.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
