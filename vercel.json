@@ -1,7 +1,7 @@
 {
   "builds": [
     {
-      "src": "config/wsgi.py",
+      "src": "fama/wsgi.py",
       "use": "@vercel/python"
     }
   ],
@@ -12,7 +12,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "config/wsgi.py"
+      "dest": "fama/wsgi.py"
     }
   ]
 }
